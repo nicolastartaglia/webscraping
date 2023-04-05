@@ -1,0 +1,3 @@
+docker run -v ${PWD}/scripts:/home/pptruser/scripts -v ${PWD}/data:/home/pptruser/data -e REP="r1" -e SEARCH="jambon herta à la broche" --rm pupeet node scripts/webscrap.js
+docker run -v ${PWD}/scripts:/home/pptruser/scripts -v ${PWD}/data:/home/pptruser/data -e REP="r2" -e SEARCH="jambon herta cuit à l'étouffée sel réduit" --rm pupeet node scripts/webscrap.js
+docker run -v ${PWD}/scripts:/home/pptruser/scripts -v ${PWD}/data:/home/pptruser/data -e REP="r3" -e SEARCH="jambon cuit à l'étouffée découenné" --rm pupeet node scripts/webscrap.js

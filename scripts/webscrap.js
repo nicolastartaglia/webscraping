@@ -1,12 +1,9 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
-const dir = 'data/' + process.env.REP;
+const url = process.env.URL;
 const mySearch = process.env.SEARCH;
-
-if (!fs.existsSync(dir)){
-    fs.mkdirSync(dir);
-}
+const mongodbServer = process.env.SERVER;
 
 function getRandomInt(min, max) {
     min = Math.ceil(min);
@@ -24,6 +21,14 @@ function getRandomInt(min, max) {
     xvfb.startSync();
 
     console.log('xvfb started');
+    
+    await mongoose.connect('mongodb://nicolas:t@' + mongodbServer + ':27017/webscraping');
+    const carrefourSchema = new mongoose.Schema({
+        title: String,
+        description: String
+    });
+    const Carrefour = mongoose.model('CarrefourProduit', carrefourSchema);
+
 
     let browser = await puppeteer.launch({
         headless: false,
@@ -33,7 +38,7 @@ function getRandomInt(min, max) {
             '--window-size=1440,1024',
             '--window-position=0,0'
         ],
-        userDataDir: './data/web'
+        userDataDir: './data'
     });
 
     const page = await browser.newPage();
@@ -46,7 +51,7 @@ function getRandomInt(min, max) {
     await page.setViewport({ width: 1440, height: 1024 });
 
     console.log('Chargement de la page web Carrefour');
-    await page.goto('https://www.carrefour.fr', { waitUntil: ['networkidle2'] });
+    await page.goto(url, { waitUntil: ['networkidle2'] });
 
     console.log("Clic sur la popup d'acceptation des cookies");
     const buttonAcceptCookies = '#onetrust-accept-btn-handler';
@@ -69,12 +74,6 @@ function getRandomInt(min, max) {
         }))
     );
 
-    const next = "=================================================\n\n";
-    const sep = "-------------------------------------------------\n";
-    await fs.writeFile(dir+'/carrefour.txt', '', function (err) {
-        if (err) throw err;
-    });
-
     for (const { link, title } of productLinkList) {
 
         console.log("Chargement d'une page produit: " + link);
@@ -87,13 +86,13 @@ function getRandomInt(min, max) {
         const completeBlockIngredients = await page.waitForSelector('div.product-block-content > div > span');
         await completeBlockIngredients.click();
         const ingredients = await page.evaluate(el => el.innerText, completeBlockIngredients);
-        await fs.appendFile(dir + '/carrefour.txt', title + "\n" + sep + ingredients + "\n" + next, function (err) {
-            if (err) throw err;
-            console.log('Produit ajouté dans le fichier "Carrefour.txt"');
-        });
+        const produit = new Carrefour({ title: title, description: ingredients });
+        await produit.save();
+        console.log('Produit ajouté en BD');
     }
     console.log('Fermeture du navigateur Chromium');
     await browser.close();
-
+    await mongoose.connection.close();
     xvfb.stopSync();
 })();
+
